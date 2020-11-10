@@ -3,4 +3,4 @@ Source code for "Targeted Metabolomics Analyses for Tumor Margin Assessment Duri
 Doruk Cakmakci, Caroline Bund, Martial Piotto, Izzie Jacques Namer and A. Ercument Cicek
 
 
-## Source code will be available very soon!
+## Documentation for the code will be available very soon!
