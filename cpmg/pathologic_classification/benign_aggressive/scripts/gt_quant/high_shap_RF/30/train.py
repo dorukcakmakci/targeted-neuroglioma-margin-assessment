@@ -1,47 +1,76 @@
 import os
 import sys
-import time 
-import pdb 
+import time
+import pdb
 import pickle
 import shap
-import numpy as np 
-import pandas as pd 
-import matplotlib.pyplot as plt 
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
-from sklearn import preprocessing 
+from sklearn import preprocessing
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import PredefinedSplit, GridSearchCV
 
 from config import *
-sys.path.insert(1,"../../../../../")
+
+sys.path.insert(1, "../../../../../")
 from classification_utils import measure_model_performance
 from feature_importance import plot_all_shap_spectrum, sort_shap_values
-sys.path.insert(1,"../../../")
+
+sys.path.insert(1, "../../../")
 from model_utils import create_data_variables
 
 important_features = []
 
 # cross validation loop
 process_start = time.time()
-for fold_id, (train_idx, vald_idx, test_idx, train_data, vald_data, test_data, all_data) in enumerate(generator(K, fold_dct, statistics, spectra, ppm_spectra, quant, class_labels)):
+for fold_id, (
+    train_idx,
+    vald_idx,
+    test_idx,
+    train_data,
+    vald_data,
+    test_data,
+    all_data,
+) in enumerate(
+    generator(K, fold_dct, statistics, spectra, ppm_spectra, quant, class_labels)
+):
     print(f"Test fold {fold_id}")
 
     # normalize
     scaler = preprocessing.MinMaxScaler().fit(train_data["quant"])
     train_data["X"] = scaler.transform(train_data["quant"])
     vald_data["X"] = scaler.transform(vald_data["quant"])
-    test_data["X"] =  scaler.transform(test_data["quant"])
+    test_data["X"] = scaler.transform(test_data["quant"])
 
     # grid search input generation
     cv_X = np.concatenate((train_data["X"], vald_data["X"]), axis=0)
-    cv_Y = np.concatenate((train_data["class_labels"], vald_data["class_labels"]), axis=0)
+    cv_Y = np.concatenate(
+        (train_data["class_labels"], vald_data["class_labels"]), axis=0
+    )
     last_train_data_idx = train_data["class_labels"].shape[0]
-    split = [(list(range(last_train_data_idx)), list(range(last_train_data_idx+1, cv_Y.shape[0])))]
+    split = [
+        (
+            list(range(last_train_data_idx)),
+            list(range(last_train_data_idx + 1, cv_Y.shape[0])),
+        )
+    ]
 
     # train
     train_start = time.time()
-    rf = RandomForestClassifier(class_weight="balanced", verbose=False, random_state=SEED)
-    gs = GridSearchCV(rf, parameter_space, cv=split, verbose=0, refit=False, scoring="roc_auc", n_jobs=-1)
+    rf = RandomForestClassifier(
+        class_weight="balanced", verbose=False, random_state=SEED
+    )
+    gs = GridSearchCV(
+        rf,
+        parameter_space,
+        cv=split,
+        verbose=0,
+        refit=False,
+        scoring="roc_auc",
+        n_jobs=-1,
+    )
     gs.fit(cv_X, np.ravel(cv_Y))
 
     # refit with best parameters
@@ -50,17 +79,26 @@ for fold_id, (train_idx, vald_idx, test_idx, train_data, vald_data, test_data, a
     min_samples_leaf = gs.best_params_["min_samples_leaf"]
     min_samples_split = gs.best_params_["min_samples_split"]
     n_estimators = gs.best_params_["n_estimators"]
-    model = RandomForestClassifier(class_weight="balanced", verbose=False, random_state=SEED, criterion=criterion, max_depth=max_depth, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators)
+    model = RandomForestClassifier(
+        class_weight="balanced",
+        verbose=False,
+        random_state=SEED,
+        criterion=criterion,
+        max_depth=max_depth,
+        min_samples_leaf=min_samples_leaf,
+        min_samples_split=min_samples_split,
+        n_estimators=n_estimators,
+    )
     model.fit(cv_X, np.ravel(cv_Y))
 
-    # save model 
+    # save model
     savepath = os.path.join(model_base_path, f"test_fold_{fold_id}")
     with open(savepath, "wb") as f:
         pickle.dump(model, f)
 
     # validate
     vald_pred = model.predict(vald_data["X"])
-    vald_pred_prob = model.predict_proba(vald_data["X"])[:,1]
+    vald_pred_prob = model.predict_proba(vald_data["X"])[:, 1]
     vald_label = vald_data["class_labels"]
 
     # calculate shap on validation dataset
@@ -68,29 +106,48 @@ for fold_id, (train_idx, vald_idx, test_idx, train_data, vald_data, test_data, a
     shap_values = explainer.shap_values(vald_data["X"])
     filepath = os.path.join(log_base_path, f"test_fold_{fold_id}_vald_fold_tumor_shap")
     np.save(filepath, shap_values[1])
-    filepath = os.path.join(log_base_path, f"test_fold_{fold_id}_vald_fold_control_shap")
+    filepath = os.path.join(
+        log_base_path, f"test_fold_{fold_id}_vald_fold_control_shap"
+    )
     np.save(filepath, shap_values[0])
 
     print("First step done")
 
-    # find high shap indices and slice feature vectors 
+    # find high shap indices and slice feature vectors
     top_k_ind, _ = sort_shap_values(shap_values[1])
     high_shap_indices = top_k_ind[0:index_count]
-    train_data["X"] = train_data["X"][:,high_shap_indices]
-    vald_data["X"] = vald_data["X"][:,high_shap_indices]
-    test_data["X"] =  test_data["X"][:,high_shap_indices]
+    train_data["X"] = train_data["X"][:, high_shap_indices]
+    vald_data["X"] = vald_data["X"][:, high_shap_indices]
+    test_data["X"] = test_data["X"][:, high_shap_indices]
 
     important_features.append(high_shap_indices.tolist())
 
     # perform grid search on the new inputs
     cv_X = np.concatenate((train_data["X"], vald_data["X"]), axis=0)
-    cv_Y = np.concatenate((train_data["class_labels"], vald_data["class_labels"]), axis=0)
+    cv_Y = np.concatenate(
+        (train_data["class_labels"], vald_data["class_labels"]), axis=0
+    )
     last_train_data_idx = train_data["class_labels"].shape[0]
-    split = [(list(range(last_train_data_idx)), list(range(last_train_data_idx+1, cv_Y.shape[0])))]
+    split = [
+        (
+            list(range(last_train_data_idx)),
+            list(range(last_train_data_idx + 1, cv_Y.shape[0])),
+        )
+    ]
 
     # train
-    rf = RandomForestClassifier(class_weight="balanced", verbose=False, random_state=SEED)
-    gs = GridSearchCV(rf, parameter_space, cv=split, verbose=0, refit=False, scoring="roc_auc", n_jobs=-1)
+    rf = RandomForestClassifier(
+        class_weight="balanced", verbose=False, random_state=SEED
+    )
+    gs = GridSearchCV(
+        rf,
+        parameter_space,
+        cv=split,
+        verbose=0,
+        refit=False,
+        scoring="roc_auc",
+        n_jobs=-1,
+    )
     gs.fit(cv_X, np.ravel(cv_Y))
     train_end = time.time()
 
@@ -100,24 +157,35 @@ for fold_id, (train_idx, vald_idx, test_idx, train_data, vald_data, test_data, a
     min_samples_leaf = gs.best_params_["min_samples_leaf"]
     min_samples_split = gs.best_params_["min_samples_split"]
     n_estimators = gs.best_params_["n_estimators"]
-    model = RandomForestClassifier(class_weight="balanced", verbose=False, random_state=SEED, criterion=criterion, max_depth=max_depth, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split, n_estimators=n_estimators)
+    model = RandomForestClassifier(
+        class_weight="balanced",
+        verbose=False,
+        random_state=SEED,
+        criterion=criterion,
+        max_depth=max_depth,
+        min_samples_leaf=min_samples_leaf,
+        min_samples_split=min_samples_split,
+        n_estimators=n_estimators,
+    )
     model.fit(cv_X, np.ravel(cv_Y))
 
     # test
     test_start = time.time()
     test_pred = model.predict(test_data["X"])
-    test_pred_prob = model.predict_proba(test_data["X"])[:,1]
+    test_pred_prob = model.predict_proba(test_data["X"])[:, 1]
     test_label = test_data["class_labels"]
     test_end = time.time()
 
     # measure performance and record metrics
-    cm, auroc, aupr, precision, recall, f1, acc = measure_model_performance(test_pred, test_pred_prob, test_label)
+    cm, auroc, aupr, precision, recall, f1, acc = measure_model_performance(
+        test_pred, test_pred_prob, test_label
+    )
     print("Class based accuracies: ")
     for i in range(2):
-        print("Class % d: % f" %(i, cm[i,i]/np.sum(cm[i,:])))
+        print("Class % d: % f" % (i, cm[i, i] / np.sum(cm[i, :])))
     print("Confusion Matrix")
     print(cm)
-    print("Accuracy: ",  acc)
+    print("Accuracy: ", acc)
     print("Precision: ", precision)
     print("Recall: ", recall)
     print("F1 Score: ", f1)
@@ -130,7 +198,7 @@ for fold_id, (train_idx, vald_idx, test_idx, train_data, vald_data, test_data, a
     metrics["recall"].append(recall)
     metrics["f1"].append(f1)
     metrics["acc"].append(acc)
-    
+
     runtime["train"].append(train_end - train_start)
     runtime["test"].append(test_end - test_start)
 

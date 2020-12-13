@@ -1,9 +1,10 @@
 import pdb
 import pickle
 import pandas as pd
-import os 
+import os
 import numpy as np
 import sys
+
 project_base_path = "/home/doruk/glioma_quantification/"
 current_path = "eretic/quantification/scripts/"
 sys.path.insert(1, os.path.join(project_base_path, current_path))
@@ -13,12 +14,14 @@ from data_utils import split_to_kfold, spectrum2ppm, spectrum_peak_unit_quantifi
 SEED = int(input("(Eretic) Enter Data and Weight Initialization Seed: "))
 
 # load fully quantified samples
-datapath_base = os.path.join(project_base_path, "data/eretic/raw/") 
+datapath_base = os.path.join(project_base_path, "data/eretic/raw/")
 with open(os.path.join(datapath_base, "all_samples_spectra"), "rb") as f:
     c_spectra = pickle.load(f)
 with open(os.path.join(datapath_base, "all_samples_quantification"), "rb") as f:
     c_quantification = pickle.load(f)
-with open(os.path.join(datapath_base, "all_samples_quantification_availability"), "rb") as f:
+with open(
+    os.path.join(datapath_base, "all_samples_quantification_availability"), "rb"
+) as f:
     c_quantification_availability = pickle.load(f)
 with open(os.path.join(project_base_path, "data/eretic/metabolite_names"), "rb") as f:
     metabolite_names = pickle.load(f)
@@ -26,7 +29,7 @@ c_statistics = pd.read_pickle(os.path.join(datapath_base, "all_samples_statistic
 
 # find samples with valid pathologic classification (i.e. "*")
 index = c_statistics.index
-condition  = c_statistics["Pathologic Classification"] != "*"
+condition = c_statistics["Pathologic Classification"] != "*"
 valid_sample_indices = index[condition].tolist()
 valid_statistics = c_statistics.iloc[valid_sample_indices, :].reset_index(drop=True)
 valid_spectra = c_spectra[valid_sample_indices, :]
@@ -43,9 +46,11 @@ spectra = valid_spectra[task_based_sample_indices, :]
 quant = valid_quant[task_based_sample_indices, :]
 quant_availability = valid_quant_availability[task_based_sample_indices, :]
 
-# split dataset to 5 folds with no patient and sample overlap 
-fold_dct, class_labels = split_to_kfold(spectra, statistics, "benign_aggressive", k=3, seed=SEED)
-class_labels = np.array(class_labels).reshape(-1,1)
+# split dataset to 5 folds with no patient and sample overlap
+fold_dct, class_labels = split_to_kfold(
+    spectra, statistics, "benign_aggressive", k=3, seed=SEED
+)
+class_labels = np.array(class_labels).reshape(-1, 1)
 
 # convert benign aggressive class labels to control tumor classes
 # currently: "benign": 0, "aggressive":1, "control":2
@@ -55,7 +60,7 @@ class_labels[class_labels == 2] = 0
 
 # Ereitc spectra need not be scaled with respect to reference Acetate and sample mass
 mass = np.array(statistics["Mass"].tolist()).astype(float)
-mass_factor = np.repeat(mass.reshape(-1,1), spectra.shape[1], axis=1)
+mass_factor = np.repeat(mass.reshape(-1, 1), spectra.shape[1], axis=1)
 normalized_spectra = np.divide(spectra, mass_factor)
 scaled_spectra = normalized_spectra
 

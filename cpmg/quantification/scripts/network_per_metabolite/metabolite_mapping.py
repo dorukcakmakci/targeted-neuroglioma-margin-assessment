@@ -1,4 +1,4 @@
-import pdb 
+import pdb
 
 
 folder2dataset = {
@@ -38,10 +38,10 @@ folder2dataset = {
     "serine": "Serine",
     "taurine": "Taurine",
     "threonine": "Threonine",
-    "valine": "Valine"
+    "valine": "Valine",
 }
 
-dataset2folder = {value:key for key, value in folder2dataset.items()}
+dataset2folder = {value: key for key, value in folder2dataset.items()}
 
-if __name__=="__main__":
+if __name__ == "__main__":
     pdb.set_trace()

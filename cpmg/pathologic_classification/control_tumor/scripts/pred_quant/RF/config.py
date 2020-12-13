@@ -1,14 +1,25 @@
 import os
 import sys
-import pandas as pd 
-import numpy as np 
+import pandas as pd
+import numpy as np
 import pdb
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-sys.path.insert(1,"../../")
+
+sys.path.insert(1, "../../")
 from data_generators import cpmg_generator_1A
-from load_fully_quantified_predicted_cpmg_data import fq_v_ppm_spectra, fq_v_spectra, fq_v_statistics, fq_v_quant, fq_v_class_labels, fq_v_metabolite_names, fq_v_fold_dct, SEED, fq_v_pred_quant
+from load_fully_quantified_predicted_cpmg_data import (
+    fq_v_ppm_spectra,
+    fq_v_spectra,
+    fq_v_statistics,
+    fq_v_quant,
+    fq_v_class_labels,
+    fq_v_metabolite_names,
+    fq_v_fold_dct,
+    SEED,
+    fq_v_pred_quant,
+)
 
 
 # data configuration
@@ -37,19 +48,24 @@ device = torch.device("cpu")
 n_estimators = [50, 150, 300, 400]
 max_depth = [10, 15, 25, 30]
 min_samples_split = [5, 10, 15]
-min_samples_leaf = [2, 10, 20] 
+min_samples_leaf = [2, 10, 20]
 criterion = ["gini", "entropy"]
-parameter_space = dict(n_estimators = n_estimators, max_depth = max_depth,  
-    min_samples_split = min_samples_split, min_samples_leaf = min_samples_leaf, criterion=criterion)
+parameter_space = dict(
+    n_estimators=n_estimators,
+    max_depth=max_depth,
+    min_samples_split=min_samples_split,
+    min_samples_leaf=min_samples_leaf,
+    criterion=criterion,
+)
 
 # save and log configuration
-base = '/home/doruk/glioma_quantification/cpmg/pathologic_classification/control_tumor/'
+base = "/home/doruk/glioma_quantification/cpmg/pathologic_classification/control_tumor/"
 model_name = f"pred_quant/RF/seed_{SEED}/"
-model_base_path = os.path.join(base, "models/"+model_name)
-log_base_path = os.path.join(base, "logs/"+model_name)
-plot_base_path = os.path.join(base, "plots/"+model_name)
+model_base_path = os.path.join(base, "models/" + model_name)
+log_base_path = os.path.join(base, "logs/" + model_name)
+plot_base_path = os.path.join(base, "plots/" + model_name)
 
-# measurement metric, shap values and timing storage 
+# measurement metric, shap values and timing storage
 all_shap_values = []
 metric_names = ["auroc", "aupr", "precision", "recall", "f1", "acc"]
 metrics = {}
@@ -97,28 +113,33 @@ folder2dataset = {
     "serine": "Serine",
     "taurine": "Taurine",
     "threonine": "Threonine",
-    "valine": "Valine"
+    "valine": "Valine",
 }
 
-dataset2folder = {value:key for key, value in folder2dataset.items()}
+dataset2folder = {value: key for key, value in folder2dataset.items()}
 
 # Single Metabolite Quantification model
 class Single_Metabolite_Model(nn.Module):
     def __init__(self):
         super(Single_Metabolite_Model, self).__init__()
         self.all_mutual = nn.Linear(1401, 192)
-        self.m1 = nn.Linear(192,1)
+        self.m1 = nn.Linear(192, 1)
+
     def forward(self, x):
         inp = F.relu(self.all_mutual(x))
         m1 = F.relu(self.m1(inp)).squeeze()
         return m1
 
+
 # Multiple Metabolite Quantification Wrapper model
 model_load_base_path = "/home/doruk/glioma_quantification/cpmg/quantification/models/network_per_metabolite/"
+
+
 class QuantificationWrapper(nn.Module):
     def __init__(self, quantifiers):
         super(QuantificationWrapper, self).__init__()
         self.quantifiers = quantifiers
+
     def forward(self, x):
         q0 = self.quantifiers[0](x)
         q1 = self.quantifiers[1](x)
@@ -158,4 +179,44 @@ class QuantificationWrapper(nn.Module):
         q35 = self.quantifiers[35](x)
         q36 = self.quantifiers[36](x)
 
-        return torch.stack([q0,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10,q11,q12,q13,q14,q15,q16,q17,q18,q19,q20,q21,q22,q23,q24,q25,q26,q27,q28,q29,q30,q31,q32,q33,q34,q35,q36]).T
+        return torch.stack(
+            [
+                q0,
+                q1,
+                q2,
+                q3,
+                q4,
+                q5,
+                q6,
+                q7,
+                q8,
+                q9,
+                q10,
+                q11,
+                q12,
+                q13,
+                q14,
+                q15,
+                q16,
+                q17,
+                q18,
+                q19,
+                q20,
+                q21,
+                q22,
+                q23,
+                q24,
+                q25,
+                q26,
+                q27,
+                q28,
+                q29,
+                q30,
+                q31,
+                q32,
+                q33,
+                q34,
+                q35,
+                q36,
+            ]
+        ).T

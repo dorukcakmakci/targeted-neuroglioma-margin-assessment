@@ -1,14 +1,24 @@
 import os
 import sys
-import pandas as pd 
-import numpy as np 
+import pandas as pd
+import numpy as np
 import pdb
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-sys.path.insert(1,"../")
+
+sys.path.insert(1, "../")
 from data_generators import cpmg_generator_1A
-from load_fully_quantified_cpmg_data import fq_v_ppm_spectra, fq_v_spectra, fq_v_statistics, fq_v_quant, fq_v_class_labels, fq_v_metabolite_names, fq_v_fold_dct, SEED
+from load_fully_quantified_cpmg_data import (
+    fq_v_ppm_spectra,
+    fq_v_spectra,
+    fq_v_statistics,
+    fq_v_quant,
+    fq_v_class_labels,
+    fq_v_metabolite_names,
+    fq_v_fold_dct,
+    SEED,
+)
 
 
 # data configuration
@@ -23,19 +33,16 @@ K = 5
 generator = cpmg_generator_1A
 
 # save and log configuration
-base = '/home/doruk/glioma_quantification/cpmg/quantification/'
+base = "/home/doruk/glioma_quantification/cpmg/quantification/"
 model_name = f"baseline/multitask_mlp/seed_{SEED}/"
-model_base_path = os.path.join(base, "models/"+model_name)
-log_base_path = os.path.join(base, "logs/"+model_name)
-plot_base_path = os.path.join(base, "plots/"+model_name)
+model_base_path = os.path.join(base, "models/" + model_name)
+log_base_path = os.path.join(base, "logs/" + model_name)
+plot_base_path = os.path.join(base, "plots/" + model_name)
 
 # neural network model configuration
 num_epochs = 2000
 weight_seed = SEED
-hp_space = {
-    "ETA": 10**-2.1,
-    "weight_decay": 0.00001
-}
+hp_space = {"ETA": 10 ** -2.1, "weight_decay": 0.00001}
 
 # gpu/cpu device selection
 gpu_id = int(input("GPU index: "))
@@ -51,50 +58,49 @@ class Model(nn.Module):
     def __init__(self, metabolite_count):
         super(Model, self).__init__()
         self.metabolite_count = metabolite_count
-        self.hidden = [] * self.metabolite_count 
+        self.hidden = [] * self.metabolite_count
         self.all_mutual = nn.Linear(1401, 192)
 
-        self.m1 = nn.Linear(192,1)
-        self.m2 = nn.Linear(192,1)
-        self.m3 = nn.Linear(192,1)
-        self.m4 = nn.Linear(192,1)
-        self.m5 = nn.Linear(192,1)
-        self.m6 = nn.Linear(192,1)
-        self.m7 = nn.Linear(192,1)
-        self.m8 = nn.Linear(192,1)
-        self.m9 = nn.Linear(192,1)
-        self.m10 = nn.Linear(192,1)
-        self.m11 = nn.Linear(192,1)
-        self.m12 = nn.Linear(192,1)
-        self.m13 = nn.Linear(192,1)
-        self.m14 = nn.Linear(192,1)
-        self.m15 = nn.Linear(192,1)
-        self.m16 = nn.Linear(192,1)
-        self.m17 = nn.Linear(192,1)
-        self.m18 = nn.Linear(192,1)
-        self.m19 = nn.Linear(192,1)
-        self.m20 = nn.Linear(192,1)
-        self.m21 = nn.Linear(192,1)
-        self.m22 = nn.Linear(192,1)
-        self.m23 = nn.Linear(192,1)
-        self.m24 = nn.Linear(192,1)
-        self.m25 = nn.Linear(192,1)
-        self.m26 = nn.Linear(192,1)
-        self.m27 = nn.Linear(192,1)
-        self.m28 = nn.Linear(192,1)
-        self.m29 = nn.Linear(192,1)
-        self.m30 = nn.Linear(192,1)
-        self.m31 = nn.Linear(192,1)
-        self.m32 = nn.Linear(192,1)
-        self.m33 = nn.Linear(192,1)
-        self.m34 = nn.Linear(192,1)
-        self.m35 = nn.Linear(192,1)
-        self.m36 = nn.Linear(192,1)
-        self.m37 = nn.Linear(192,1)
+        self.m1 = nn.Linear(192, 1)
+        self.m2 = nn.Linear(192, 1)
+        self.m3 = nn.Linear(192, 1)
+        self.m4 = nn.Linear(192, 1)
+        self.m5 = nn.Linear(192, 1)
+        self.m6 = nn.Linear(192, 1)
+        self.m7 = nn.Linear(192, 1)
+        self.m8 = nn.Linear(192, 1)
+        self.m9 = nn.Linear(192, 1)
+        self.m10 = nn.Linear(192, 1)
+        self.m11 = nn.Linear(192, 1)
+        self.m12 = nn.Linear(192, 1)
+        self.m13 = nn.Linear(192, 1)
+        self.m14 = nn.Linear(192, 1)
+        self.m15 = nn.Linear(192, 1)
+        self.m16 = nn.Linear(192, 1)
+        self.m17 = nn.Linear(192, 1)
+        self.m18 = nn.Linear(192, 1)
+        self.m19 = nn.Linear(192, 1)
+        self.m20 = nn.Linear(192, 1)
+        self.m21 = nn.Linear(192, 1)
+        self.m22 = nn.Linear(192, 1)
+        self.m23 = nn.Linear(192, 1)
+        self.m24 = nn.Linear(192, 1)
+        self.m25 = nn.Linear(192, 1)
+        self.m26 = nn.Linear(192, 1)
+        self.m27 = nn.Linear(192, 1)
+        self.m28 = nn.Linear(192, 1)
+        self.m29 = nn.Linear(192, 1)
+        self.m30 = nn.Linear(192, 1)
+        self.m31 = nn.Linear(192, 1)
+        self.m32 = nn.Linear(192, 1)
+        self.m33 = nn.Linear(192, 1)
+        self.m34 = nn.Linear(192, 1)
+        self.m35 = nn.Linear(192, 1)
+        self.m36 = nn.Linear(192, 1)
+        self.m37 = nn.Linear(192, 1)
 
-  
     def forward(self, x):
-        # mutual branch 
+        # mutual branch
         inp = F.relu(self.all_mutual(x))
 
         m1 = F.relu(self.m1(inp)).squeeze()
@@ -134,9 +140,47 @@ class Model(nn.Module):
         m35 = F.relu(self.m35(inp)).squeeze()
         m36 = F.relu(self.m36(inp)).squeeze()
         m37 = F.relu(self.m37(inp)).squeeze()
-        
-        return m1, m2, m3, m4, m5, m6, m7, m8, m9, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20,\
-            m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31, m32, m33, m34, m35, m36, m37
+
+        return (
+            m1,
+            m2,
+            m3,
+            m4,
+            m5,
+            m6,
+            m7,
+            m8,
+            m9,
+            m10,
+            m11,
+            m12,
+            m13,
+            m14,
+            m15,
+            m16,
+            m17,
+            m18,
+            m19,
+            m20,
+            m21,
+            m22,
+            m23,
+            m24,
+            m25,
+            m26,
+            m27,
+            m28,
+            m29,
+            m30,
+            m31,
+            m32,
+            m33,
+            m34,
+            m35,
+            m36,
+            m37,
+        )
+
 
 # weight initialization
 def initialize_weights(m):
@@ -144,7 +188,8 @@ def initialize_weights(m):
         torch.nn.init.kaiming_uniform_(m.weight)
         m.bias.data.fill_(0.01)
 
-# measurement metric and timing storage 
+
+# measurement metric and timing storage
 metric_names = ["mae", "mse", "mape", "r2", "absolute_percentage_error"]
 metrics = {}
 for name in metric_names:
